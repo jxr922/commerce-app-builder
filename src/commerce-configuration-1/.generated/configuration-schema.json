@@ -1,0 +1,27 @@
+[
+  {
+    "default": [
+      "a"
+    ],
+    "label": "Sample List",
+    "name": "sampleList",
+    "options": [
+      {
+        "label": "Option A",
+        "value": "a"
+      },
+      {
+        "label": "Option B",
+        "value": "b"
+      }
+    ],
+    "selectionMode": "multiple",
+    "type": "list"
+  },
+  {
+    "default": "Hello, world!",
+    "label": "Sample Text",
+    "name": "sampleText",
+    "type": "text"
+  }
+]
