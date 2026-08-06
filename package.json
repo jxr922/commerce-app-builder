@@ -1,0 +1,16 @@
+{
+  "name": "oop-ext",
+  "private": true,
+  "version": "1.0.0",
+  "dependencies": {
+    "@adobe/aio-commerce-lib-app": "^1.10.0",
+    "@adobe/aio-commerce-sdk": "^1.4.1"
+  },
+  "description": "A custom Adobe Commerce application. Fill description for your app.",
+  "imports": {
+    "#app.commerce.config": "./src/commerce-extensibility-1/.generated/app.commerce.config.js"
+  },
+  "scripts": {
+    "postinstall": "npx aio-commerce-lib-app hooks postinstall"
+  }
+}
