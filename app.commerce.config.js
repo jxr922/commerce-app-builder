@@ -44,13 +44,13 @@ module.exports = defineConfig({
     ],
   },
   installation: {
-    customInstallationSteps: [
-      {
-        description: "Use case description for the step.",
-        name: "sample-step",
-        script: "./path/to/script.js",
-      },
-    ],
+    // customInstallationSteps: [
+    //   {
+    //     description: "Use case description for the step.",
+    //     name: "sample-step",
+    //     script: "./path/to/script.js",
+    //   },
+    // ],
   },
   webhooks: [
     {
