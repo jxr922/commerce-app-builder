@@ -1,5 +1,23 @@
 {
   "meshConfig": {
+    "responseConfig": {
+      "CORS": {
+        "maxAge": 60480,
+        "methods": [
+          "GET",
+          "POST",
+          "PUT",
+          "HEAD",
+          "OPTIONS"
+        ],
+        "origin": [
+          "http://localhost:3000",
+          "https://main--accs-edstraining-test3--adobepls.aem.page",
+          "https://main--accs-edstraining-test3--adobepls.aem.live",
+          "https://main--commerce-storefront--jxr922.aem.page"
+        ]
+      }
+    },
     "sources": [
       {
         "name": "Commerce",
