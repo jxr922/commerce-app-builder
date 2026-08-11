@@ -32,6 +32,7 @@ runtimeManifest:
             timeout: 60000
             memorySize: 256
           annotations:
+            web-export: true
             require-adobe-auth: false
             final: true
 
