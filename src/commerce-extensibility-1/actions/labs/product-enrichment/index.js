@@ -1,19 +1,10 @@
 const { Core } = require('@adobe/aio-sdk');
-
 const IMS_TOKEN_URL = 'https://ims-na1.adobelogin.com/ims/token/v3';
-const DEFAULT_SCOPES =
-    'openid,AdobeID,email,profile,additional_info.roles,additional_info.projectedProductContext,commerce.accs';
+const DEFAULT_SCOPES = 'openid,AdobeID,email,profile,additional_info.roles,additional_info.projectedProductContext,commerce.accs';
 
-/**
- * Adobe I/O often stores IMS_OAUTH_S2S_SCOPES in .env as a JSON array string. IMS expects a
- * space-delimited scope parameter (RFC 6749). Also normalizes comma-separated lists.
- */
+/** * Adobe I/O often stores IMS_OAUTH_S2S_SCOPES in .env as a JSON array string. IMS expects a * space-delimited scope parameter (RFC 6749). Also normalizes comma-separated lists. */
 function normalizeScopeTokens(scopeStr) {
-    return String(scopeStr)
-        .split(/[,\s]+/)
-        .map((t) => t.trim())
-        .filter(Boolean)
-        .join(' ');
+    return String(scopeStr) .split(/[,\s]+/) .map((t) => t.trim()) .filter(Boolean) .join(' ');
 }
 
 function resolveImsScopeParam(raw, defaultScopes) {
@@ -30,9 +21,7 @@ function resolveImsScopeParam(raw, defaultScopes) {
             if (Array.isArray(parsed)) {
                 return parsed.map((t) => String(t).trim()).filter(Boolean).join(' ');
             }
-        } catch {
-            /* fall through */
-        }
+        } catch { /* fall through */ }
     }
     return normalizeScopeTokens(s);
 }
@@ -66,26 +55,53 @@ async function getImsAccessToken(params) {
 }
 
 async function main(params) {
-    const logger = Core.Logger('product-enrichment', {
-        level: params.LOG_LEVEL || 'info',
-    });
+    const logger = Core.Logger('product-enrichment', { level: params.LOG_LEVEL || 'info', });
+
+    // --- CORS HEADER RESOLUTION LOGIC ---
+    const incomingHeaders = params.__ow_headers || {};
+    const origin = incomingHeaders.origin || incomingHeaders.Origin || '';
+
+    // Initialize secure, standard CORS headers
+    const responseHeaders = {
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, x-api-key',
+    };
+
+    // Safely allow da.live and AEM / Edge Delivery Services preview/live domains
+    if (
+        origin === 'https://da.live' ||
+        origin.endsWith('.hlx.page') ||
+        origin.endsWith('.hlx.live') ||
+        origin.endsWith('.aem.page') ||
+        origin.endsWith('.aem.live')
+    ) {
+        responseHeaders['Access-Control-Allow-Origin'] = origin;
+    }
+
+    // Intercept and resolve preflight OPTIONS requests instantly
+    const requestMethod = params.__ow_method || '';
+    if (requestMethod.toLowerCase() === 'options') {
+        return {
+            statusCode: 200,
+            headers: responseHeaders,
+            body: '',
+        };
+    }
+    // ------------------------------------
 
     try {
         const { sku } = params;
         if (!sku) {
             return {
                 statusCode: 400,
+                headers: responseHeaders, // Injected CORS
                 body: { error: 'Missing required parameter: sku' },
             };
         }
-
         logger.info(`Fetching product data for SKU: ${sku}`);
-
         const baseUrl = params.COMMERCE_API_BASE_URL.replace(/\/$/, '');
         const accessToken = await getImsAccessToken(params);
-
         const productUrl = `${baseUrl}/V1/products/${encodeURIComponent(sku)}`;
-
         const response = await fetch(productUrl, {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
@@ -94,17 +110,15 @@ async function main(params) {
                 'Content-Type': 'application/json',
             },
         });
-
         if (!response.ok) {
             logger.error(`Commerce API returned ${response.status}`);
             return {
                 statusCode: response.status,
+                headers: responseHeaders, // Injected CORS
                 body: { error: `Commerce API error: ${response.statusText}` },
             };
         }
-
         const product = await response.json();
-
         const enrichedProduct = {
             sku: product.sku,
             name: product.name,
@@ -113,19 +127,20 @@ async function main(params) {
             estimatedDelivery: '3-5 business days',
             enrichedAt: new Date().toISOString(),
         };
-
         logger.info(`Successfully enriched product: ${sku}`);
-
         return {
             statusCode: 200,
+            headers: responseHeaders, // Injected CORS
             body: enrichedProduct,
         };
     } catch (error) {
         logger.error('Action failed:', error.message);
         return {
             statusCode: 500,
+            headers: responseHeaders, // Injected CORS
             body: { error: 'Internal server error' },
         };
     }
 }
+
 exports.main = main;
