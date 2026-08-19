@@ -74,3 +74,5 @@ runtimeManifest:
             require-adobe-auth: true
           limits:
             timeout: 600000
+
+# working config for activity week 3
