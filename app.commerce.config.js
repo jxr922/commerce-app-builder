@@ -80,4 +80,23 @@ module.exports = defineConfig({
       },
     },
   ],
+  adminUiSdk: {
+    registration: {
+      menuItems: [
+        {
+          id: 'order_enrichment_admin::apps',
+          title: 'Order Enrichment',
+          isSection: true,
+          sortOrder: 100,
+        },
+        {
+          id: 'order_enrichment_admin::enriched_orders',
+          title: 'Enriched Orders',
+          parent: 'order_enrichment_admin::apps',
+          sortOrder: 1,
+        },
+      ],
+    },
+  },
+
 });
