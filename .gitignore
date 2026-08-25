@@ -3,3 +3,5 @@
 .aio
 node_modules/*
 dist/*
+.DS_Store
+.parcel-cache/*
