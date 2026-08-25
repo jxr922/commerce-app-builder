@@ -8,6 +8,52 @@ const DEFAULT_SCOPES =
 let cachedToken = null;
 let cachedExpiryMs = 0;
 
+function normalizeScopeTokens (scopeStr) {
+    return String(scopeStr)
+        .split(/[,\s]+/)
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .join(' ');
+}
+
+function resolveImsScopeParam (raw, defaultScopes) {
+    if (raw == null || (typeof raw === 'string' && raw.trim() === '')) {
+        return normalizeScopeTokens(defaultScopes);
+    }
+    if (Array.isArray(raw)) {
+        return raw.map((t) => String(t).trim()).filter(Boolean).join(' ');
+    }
+    const s = String(raw).trim();
+    if (s.startsWith('[')) {
+        try {
+            const parsed = JSON.parse(s);
+            if (Array.isArray(parsed)) {
+                return parsed.map((t) => String(t).trim()).filter(Boolean).join(' ');
+            }
+        } catch {
+            /* fall through */
+        }
+    }
+    return normalizeScopeTokens(s);
+}
+
+function resolveCommerceBaseUrl (rawBaseUrl) {
+    const base = String(rawBaseUrl || '').trim();
+    if (!base) {
+        throw new Error('Missing required parameter: COMMERCE_API_BASE_URL');
+    }
+    let parsed;
+    try {
+        parsed = new URL(base);
+    } catch {
+        throw new Error(`Invalid COMMERCE_API_BASE_URL: ${base}`);
+    }
+    if (!/^https?:$/.test(parsed.protocol)) {
+        throw new Error(`COMMERCE_API_BASE_URL must use http/https: ${base}`);
+    }
+    return parsed.toString().replace(/\/$/, '');
+}
+
 async function getImsAccessToken (params) {
     if (cachedToken && Date.now() < cachedExpiryMs - 60_000) {
         return cachedToken;
@@ -16,7 +62,7 @@ async function getImsAccessToken (params) {
         client_id: params.IMS_OAUTH_S2S_CLIENT_ID,
         client_secret: params.IMS_OAUTH_S2S_CLIENT_SECRET,
         grant_type: 'client_credentials',
-        scope: params.IMS_OAUTH_S2S_SCOPES || DEFAULT_SCOPES,
+        scope: resolveImsScopeParam(params.IMS_OAUTH_S2S_SCOPES, DEFAULT_SCOPES),
     });
     const res = await fetch(IMS_TOKEN_URL, {
         method: 'POST',
@@ -69,12 +115,12 @@ async function main (params) {
 
         logger.info(`Processing order: ${orderId}`);
 
-        const baseUrl = params.COMMERCE_API_BASE_URL.replace(/\/$/, '');
+        const baseUrl = resolveCommerceBaseUrl(params.COMMERCE_API_BASE_URL);
         const accessToken = await getImsAccessToken(params);
+        const normalizedStoreCode = String(params.COMMERCE_STORE_CODE || 'default').trim() || 'default';
 
-        const orderUrl = `${baseUrl}/V1/orders/${encodeURIComponent(orderId)}`;
-
-        const orderResponse = await fetch(
+        const orderUrl = new URL(`V1/orders/${encodeURIComponent(orderId)}`, `${baseUrl}/`).toString();
+        let orderResponse = await fetch(
             orderUrl,
             {
                 headers: {
@@ -86,11 +132,33 @@ async function main (params) {
             }
         );
 
+        if (orderResponse.status === 404 && !/\/rest(\/|$)/.test(new URL(baseUrl).pathname)) {
+            const fallbackBaseUrl = `${baseUrl}/rest/${encodeURIComponent(normalizedStoreCode)}`;
+            const fallbackOrderUrl = new URL(`V1/orders/${encodeURIComponent(orderId)}`, `${fallbackBaseUrl}/`).toString();
+            logger.info(`Order lookup retry with store-scoped REST path: ${fallbackOrderUrl}`);
+            orderResponse = await fetch(
+                fallbackOrderUrl,
+                {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        'x-api-key': params.IMS_OAUTH_S2S_CLIENT_ID,
+                        'x-gw-ims-org-id': params.IMS_OAUTH_S2S_ORG_ID,
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
+        }
+
         if (!orderResponse.ok) {
-            logger.error(`Commerce API returned ${orderResponse.status} for order ${orderId}`);
+            const errorText = await orderResponse.text();
+            logger.error(`Commerce API returned ${orderResponse.status} for order ${orderId}: ${errorText}`);
             return {
                 statusCode: 500,
-                body: { error: `Failed to fetch order ${orderId}` },
+                body: {
+                    error: `Failed to fetch order ${orderId}`,
+                    commerceStatus: orderResponse.status,
+                    commerceBody: errorText,
+                },
             };
         }
 
