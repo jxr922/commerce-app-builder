@@ -10,10 +10,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      # AIO CLI non-interactive auth in CI
-      AIO_CLIENT_ID: ${{ secrets.IMS_OAUTH_S2S_CLIENT_ID }}
-      AIO_CLIENT_SECRET: ${{ secrets.IMS_OAUTH_S2S_CLIENT_SECRET }}
-      AIO_IMS_ORG_ID: ${{ secrets.IMS_OAUTH_S2S_ORG_ID }}
+      # AIO CLI non-interactive S2S auth in CI (IMS context env-var override format)
+      AIO_IMS_CONTEXTS_CLI_CLIENT__ID: ${{ secrets.IMS_OAUTH_S2S_CLIENT_ID }}
+      AIO_IMS_CONTEXTS_CLI_CLIENT__SECRET: ${{ secrets.IMS_OAUTH_S2S_CLIENT_SECRET }}
+      AIO_IMS_CONTEXTS_CLI_ORG__ID: ${{ secrets.IMS_OAUTH_S2S_ORG_ID }}
+      AIO_IMS_CONTEXTS_CLI_SCOPES: ${{ secrets.IMS_OAUTH_S2S_SCOPES }}
       # Runtime targeting
       AIO_RUNTIME_NAMESPACE: ${{ secrets.AIO_RUNTIME_NAMESPACE }}
       AIO_RUNTIME_AUTH: ${{ secrets.AIO_RUNTIME_AUTH }}
