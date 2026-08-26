@@ -9,6 +9,15 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      # AIO CLI non-interactive auth in CI
+      AIO_CLIENT_ID: ${{ secrets.IMS_OAUTH_S2S_CLIENT_ID }}
+      AIO_CLIENT_SECRET: ${{ secrets.IMS_OAUTH_S2S_CLIENT_SECRET }}
+      AIO_IMS_ORG_ID: ${{ secrets.IMS_OAUTH_S2S_ORG_ID }}
+      # Runtime targeting
+      AIO_RUNTIME_NAMESPACE: ${{ secrets.AIO_RUNTIME_NAMESPACE }}
+      AIO_RUNTIME_AUTH: ${{ secrets.AIO_RUNTIME_AUTH }}
+      AIO_RUNTIME_APIHOST: https://adobeioruntime.net
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -45,6 +54,14 @@ jobs:
           echo "COMMERCE_STORE_CODE=$COMMERCE_STORE_CODE" >> .env
 
       - name: Deploy
+        env:
+          # Keep deploy inputs available as environment variables
+          IMS_OAUTH_S2S_CLIENT_ID: ${{ secrets.IMS_OAUTH_S2S_CLIENT_ID }}
+          IMS_OAUTH_S2S_CLIENT_SECRET: ${{ secrets.IMS_OAUTH_S2S_CLIENT_SECRET }}
+          IMS_OAUTH_S2S_ORG_ID: ${{ secrets.IMS_OAUTH_S2S_ORG_ID }}
+          IMS_OAUTH_S2S_SCOPES: ${{ secrets.IMS_OAUTH_S2S_SCOPES }}
+          COMMERCE_API_BASE_URL: ${{ secrets.COMMERCE_API_BASE_URL }}
+          COMMERCE_STORE_CODE: ${{ secrets.COMMERCE_STORE_CODE }}
         run: aio app deploy
 
       - name: Verify deployment
