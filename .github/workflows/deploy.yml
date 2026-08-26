@@ -38,34 +38,15 @@ jobs:
           CLIENT_SECRET: ${{ secrets.IMS_OAUTH_S2S_CLIENT_SECRET }}
           SCOPES: ${{ secrets.IMS_OAUTH_S2S_SCOPES }}
         run: |
-          echo "=== DEBUG: Requesting IMS token ==="
           RESPONSE=$(curl -s -X POST "https://ims-na1.adobelogin.com/ims/token/v3" \
             -H "Content-Type: application/x-www-form-urlencoded" \
             -d "grant_type=client_credentials&client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}&scope=${SCOPES}")
 
-          echo "=== DEBUG: IMS response keys ==="
-          echo "$RESPONSE" | jq 'keys'
-
-          echo "=== DEBUG: token_type ==="
-          echo "$RESPONSE" | jq -r '.token_type // "MISSING"'
-
-          echo "=== DEBUG: expires_in ==="
-          echo "$RESPONSE" | jq -r '.expires_in // "MISSING"'
-
-          echo "=== DEBUG: error (if any) ==="
-          echo "$RESPONSE" | jq -r '.error // "none"'
-
-          echo "=== DEBUG: error_description (if any) ==="
-          echo "$RESPONSE" | jq -r '.error_description // "none"'
-
           TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
           if [ "$TOKEN" = "null" ] || [ -z "$TOKEN" ]; then
-            echo "::error::IMS token fetch failed - access_token is null or empty"
+            echo "::error::IMS token fetch failed: $(echo "$RESPONSE" | jq -r '.error_description // .error // "unknown error"')"
             exit 1
           fi
-
-          echo "=== DEBUG: Token length ==="
-          echo "${#TOKEN} characters"
 
           echo "::add-mask::${TOKEN}"
           echo "AIO_IMS_CONTEXTS_CLI_ACCESS__TOKEN_TOKEN=${TOKEN}" >> "$GITHUB_ENV"
@@ -97,4 +78,6 @@ jobs:
         run: aio app deploy
 
       - name: Verify deployment
+        env:
+          AIO_IMS_CONTEXTS_CLI_ORG_ID: ${{ secrets.IMS_OAUTH_S2S_ORG_ID }}
         run: aio runtime action list
