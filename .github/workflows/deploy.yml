@@ -10,12 +10,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      # AIO CLI non-interactive S2S auth in CI (IMS context env-var override format)
-      AIO_IMS_CONTEXTS_CLI_CLIENT__ID: ${{ secrets.IMS_OAUTH_S2S_CLIENT_ID }}
-      AIO_IMS_CONTEXTS_CLI_CLIENT__SECRET: ${{ secrets.IMS_OAUTH_S2S_CLIENT_SECRET }}
-      AIO_IMS_CONTEXTS_CLI_ORG__ID: ${{ secrets.IMS_OAUTH_S2S_ORG_ID }}
-      AIO_IMS_CONTEXTS_CLI_SCOPES: ${{ secrets.IMS_OAUTH_S2S_SCOPES }}
-      # Runtime targeting
       AIO_RUNTIME_NAMESPACE: ${{ secrets.AIO_RUNTIME_NAMESPACE }}
       AIO_RUNTIME_AUTH: ${{ secrets.AIO_RUNTIME_AUTH }}
       AIO_RUNTIME_APIHOST: https://adobeioruntime.net
@@ -34,10 +28,23 @@ jobs:
       - name: Install AIO CLI
         run: npm install -g @adobe/aio-cli
 
+      - name: Obtain IMS access token (OAuth S2S client credentials)
+        env:
+          CLIENT_ID: ${{ secrets.IMS_OAUTH_S2S_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.IMS_OAUTH_S2S_CLIENT_SECRET }}
+          SCOPES: ${{ secrets.IMS_OAUTH_S2S_SCOPES }}
+        run: |
+          TOKEN=$(curl -s -X POST "https://ims-na1.adobelogin.com/ims/token/v3" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "grant_type=client_credentials&client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}&scope=${SCOPES}" \
+            | jq -r '.access_token')
+          echo "::add-mask::${TOKEN}"
+          echo "AIO_IMS_CONTEXTS_CLI_ACCESS__TOKEN_TOKEN=${TOKEN}" >> "$GITHUB_ENV"
+          EXPIRY=$(( $(date +%s%3N) + 1800000 ))
+          echo "AIO_IMS_CONTEXTS_CLI_ACCESS__TOKEN_EXPIRY=${EXPIRY}" >> "$GITHUB_ENV"
+
       - name: Create .env for deployment
         env:
-          AIO_RUNTIME_NAMESPACE: ${{ secrets.AIO_RUNTIME_NAMESPACE }}
-          AIO_RUNTIME_AUTH: ${{ secrets.AIO_RUNTIME_AUTH }}
           IMS_OAUTH_S2S_CLIENT_ID: ${{ secrets.IMS_OAUTH_S2S_CLIENT_ID }}
           IMS_OAUTH_S2S_CLIENT_SECRET: ${{ secrets.IMS_OAUTH_S2S_CLIENT_SECRET }}
           IMS_OAUTH_S2S_ORG_ID: ${{ secrets.IMS_OAUTH_S2S_ORG_ID }}
@@ -56,11 +63,6 @@ jobs:
 
       - name: Deploy
         env:
-          # Keep deploy inputs available as environment variables
-          IMS_OAUTH_S2S_CLIENT_ID: ${{ secrets.IMS_OAUTH_S2S_CLIENT_ID }}
-          IMS_OAUTH_S2S_CLIENT_SECRET: ${{ secrets.IMS_OAUTH_S2S_CLIENT_SECRET }}
-          IMS_OAUTH_S2S_ORG_ID: ${{ secrets.IMS_OAUTH_S2S_ORG_ID }}
-          IMS_OAUTH_S2S_SCOPES: ${{ secrets.IMS_OAUTH_S2S_SCOPES }}
           COMMERCE_API_BASE_URL: ${{ secrets.COMMERCE_API_BASE_URL }}
           COMMERCE_STORE_CODE: ${{ secrets.COMMERCE_STORE_CODE }}
         run: aio app deploy
