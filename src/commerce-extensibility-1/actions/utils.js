@@ -16,7 +16,6 @@ function errorResponse (statusCode, message, correlationId) {
         statusCode,
         headers: {
             'Content-Type': 'application/json',
-            ...corsHeaders(),
         },
         body: {
             error: message,
@@ -31,7 +30,6 @@ function successResponse (body, correlationId) {
         statusCode: 200,
         headers: {
             'Content-Type': 'application/json',
-            ...corsHeaders(),
         },
         body: {
             ...body,
