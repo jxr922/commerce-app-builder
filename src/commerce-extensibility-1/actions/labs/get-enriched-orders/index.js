@@ -1,12 +1,20 @@
 const { Core } = require('@adobe/aio-sdk');
 const stateLib = require('@adobe/aio-lib-state');
+const { successResponse, errorResponse } = require('../../utils');
 
 async function main (params) {
-    const logger = Core.Logger('get-enriched-orders', {
-        level: params.LOG_LEVEL || 'info',
-    });
+    const logger = Core.Logger('get-enriched-orders', {level: params.LOG_LEVEL || 'info'});
+    const startTime = Date.now();
+    const correlationId = params['x-correlation-id'] || require('uuid').v4();
 
     try {
+        logger.info({
+            action: 'get-enriched-orders',
+            message: 'Action invoked',
+            orderIds: params.orderIds,
+            timestamp: new Date().toISOString(),
+        });
+
         const state = await stateLib.init();
 
         const orderKeys = params.orderIds
@@ -47,22 +55,25 @@ async function main (params) {
             ).length,
         };
 
-        return {
-            statusCode: 200,
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: { orders, summary },
-        };
+        logger.info({
+            action: 'get-enriched-orders',
+            message: 'Action completed',
+            totalOrders: summary.totalOrders,
+            totalRevenue: summary.totalRevenue,
+            durationMs: Date.now() - startTime,
+            timestamp: new Date().toISOString(),
+        });
+
+        return successResponse({ orders, summary }, correlationId);
     } catch (error) {
-        logger.error('Failed to fetch enriched orders:', error.message);
-        return {
-            statusCode: 500,
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: { error: 'Failed to fetch enriched orders' },
-        };
+        logger.error({
+            action: 'get-enriched-orders',
+            message: 'Action failed',
+            error: error.message,
+            durationMs: Date.now() - startTime,
+            timestamp: new Date().toISOString(),
+        });
+        return errorResponse(500, 'Failed to fetch enriched orders', correlationId);
     }
 }
 

@@ -13,7 +13,8 @@
     "@adobe/uix-guest": "^1.0.3",
     "react-error-boundary": "^4.0.13",
     "react-router-dom": "^6.28.0",
-    "regenerator-runtime": "^0.14.1"
+    "regenerator-runtime": "^0.14.1",
+    "uuid": "^14.0.2"
   },
   "description": "A custom Adobe Commerce application. Fill description for your app.",
   "imports": {

@@ -1,4 +1,5 @@
 const { Core } = require('@adobe/aio-sdk');
+const { successResponse, errorResponse } = require('../../utils');
 
 const IMS_TOKEN_URL = 'https://ims-na1.adobelogin.com/ims/token/v3';
 const DEFAULT_SCOPES =
@@ -66,20 +67,29 @@ async function getImsAccessToken(params) {
 }
 
 async function main(params) {
-    const logger = Core.Logger('product-enrichment', {
-        level: params.LOG_LEVEL || 'info',
-    });
+    const logger = Core.Logger('product-enrichment', {level: params.LOG_LEVEL || 'info'});
+    const startTime = Date.now();
+    const correlationId = params['x-correlation-id'] || require('uuid').v4();
 
     try {
         const { sku } = params;
-        if (!sku) {
-            return {
-                statusCode: 400,
-                body: { error: 'Missing required parameter: sku' },
-            };
-        }
+        
+        logger.info({
+            action: 'product-enrichment',
+            message: 'Action invoked',
+            sku,
+            timestamp: new Date().toISOString(),
+        });
 
-        logger.info(`Fetching product data for SKU: ${sku}`);
+        if (!sku) {
+            logger.warn({
+                action: 'product-enrichment',
+                message: 'Missing required parameter',
+                parameter: 'sku',
+                timestamp: new Date().toISOString(),
+            });
+            return errorResponse(400, 'Missing required parameter: sku', correlationId);
+        }
 
         const baseUrl = params.COMMERCE_API_BASE_URL.replace(/\/$/, '');
         const accessToken = await getImsAccessToken(params);
@@ -96,11 +106,15 @@ async function main(params) {
         });
 
         if (!response.ok) {
-            logger.error(`Commerce API returned ${response.status}`);
-            return {
-                statusCode: response.status,
-                body: { error: `Commerce API error: ${response.statusText}` },
-            };
+            logger.error({
+                action: 'product-enrichment',
+                message: 'Commerce API returned error',
+                sku,
+                commerceStatus: response.status,
+                commerceStatusText: response.statusText,
+                timestamp: new Date().toISOString(),
+            });
+            return errorResponse(response.status, `Commerce API error: ${response.statusText}`, correlationId);
         }
 
         const product = await response.json();
@@ -114,18 +128,28 @@ async function main(params) {
             enrichedAt: new Date().toISOString(),
         };
 
-        logger.info(`Successfully enriched product: ${sku}`);
+        logger.info({
+            action: 'product-enrichment',
+            message: 'Action completed',
+            sku,
+            name: product.name,
+            price: product.price,
+            sustainabilityScore: enrichedProduct.sustainabilityScore,
+            durationMs: Date.now() - startTime,
+            timestamp: new Date().toISOString(),
+        });
 
-        return {
-            statusCode: 200,
-            body: enrichedProduct,
-        };
+        return successResponse(enrichedProduct, correlationId);
     } catch (error) {
-        logger.error('Action failed:', error.message);
-        return {
-            statusCode: 500,
-            body: { error: 'Internal server error' },
-        };
+        logger.error({
+            action: 'product-enrichment',
+            message: 'Action failed',
+            error: error.message,
+            errorStack: error.stack,
+            durationMs: Date.now() - startTime,
+            timestamp: new Date().toISOString(),
+        });
+        return errorResponse(500, 'Internal server error', correlationId);
     }
 }
 exports.main = main;
