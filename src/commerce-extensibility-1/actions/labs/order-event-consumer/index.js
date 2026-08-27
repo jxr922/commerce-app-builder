@@ -80,9 +80,7 @@ async function getImsAccessToken (params) {
 }
 
 async function main (params) {
-    const logger = Core.Logger('order-event-consumer', {
-        level: params.LOG_LEVEL || 'info',
-    });
+    const logger = Core.Logger('order-event-consumer', {level: params.LOG_LEVEL || 'info'});
 
     try {
         const eventId = params.event_id;

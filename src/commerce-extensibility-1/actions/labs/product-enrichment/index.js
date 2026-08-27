@@ -66,9 +66,7 @@ async function getImsAccessToken(params) {
 }
 
 async function main(params) {
-    const logger = Core.Logger('product-enrichment', {
-        level: params.LOG_LEVEL || 'info',
-    });
+    const logger = Core.Logger('product-enrichment', {level: params.LOG_LEVEL || 'info'});
 
     try {
         const { sku } = params;

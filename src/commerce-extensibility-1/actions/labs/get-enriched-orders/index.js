@@ -2,9 +2,7 @@ const { Core } = require('@adobe/aio-sdk');
 const stateLib = require('@adobe/aio-lib-state');
 
 async function main (params) {
-    const logger = Core.Logger('get-enriched-orders', {
-        level: params.LOG_LEVEL || 'info',
-    });
+    const logger = Core.Logger('get-enriched-orders', {level: params.LOG_LEVEL || 'info'});
 
     try {
         const state = await stateLib.init();

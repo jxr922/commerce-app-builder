@@ -1,9 +1,7 @@
 const { Core } = require('@adobe/aio-sdk');
 
 async function main (params) {
-    const logger = Core.Logger('validate-product', {
-        level: params.LOG_LEVEL || 'info',
-    });
+    const logger = Core.Logger('validate-product', {level: params.LOG_LEVEL || 'info'});
 
     logger.info('Webhook received:', JSON.stringify(params));
 
