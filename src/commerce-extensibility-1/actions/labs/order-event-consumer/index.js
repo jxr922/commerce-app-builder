@@ -1,6 +1,6 @@
 const { Core } = require('@adobe/aio-sdk');
 const stateLib = require('@adobe/aio-lib-state');
-const { successResponse, errorResponse } = require('../utils');
+const { successResponse, errorResponse } = require('../../utils');
 
 const IMS_TOKEN_URL = 'https://ims-na1.adobelogin.com/ims/token/v3';
 const DEFAULT_SCOPES =
@@ -183,10 +183,9 @@ async function main (params) {
                 timestamp: new Date().toISOString(),
             });
             return errorResponse(
-                `Failed to fetch order ${orderId}`,
                 500,
-                correlationId,
-                { commerceStatus: orderResponse.status, commerceBody: errorText }
+                `Failed to fetch order ${orderId}`,
+                correlationId
             );
         }
 
@@ -267,7 +266,7 @@ async function main (params) {
             durationMs: Date.now() - startTime,
             timestamp: new Date().toISOString(),
         });
-        return errorResponse('Event processing failed', 500, correlationId);
+        return errorResponse(500, 'Event processing failed', correlationId);
     }
 }
 

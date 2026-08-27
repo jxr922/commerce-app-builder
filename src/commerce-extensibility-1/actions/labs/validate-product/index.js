@@ -1,5 +1,5 @@
 const { Core } = require('@adobe/aio-sdk');
-const { successResponse, errorResponse } = require('../utils');
+const { successResponse, errorResponse } = require('../../utils');
 
 async function main (params) {
     const logger = Core.Logger('validate-product', {level: params.LOG_LEVEL || 'info'});

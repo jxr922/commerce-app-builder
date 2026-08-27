@@ -1,5 +1,5 @@
 const { Core } = require('@adobe/aio-sdk');
-const { successResponse, errorResponse } = require('../utils');
+const { successResponse, errorResponse } = require('../../utils');
 
 const IMS_TOKEN_URL = 'https://ims-na1.adobelogin.com/ims/token/v3';
 const DEFAULT_SCOPES =
@@ -88,7 +88,7 @@ async function main(params) {
                 parameter: 'sku',
                 timestamp: new Date().toISOString(),
             });
-            return errorResponse('Missing required parameter: sku', 400, correlationId);
+            return errorResponse(400, 'Missing required parameter: sku', correlationId);
         }
 
         const baseUrl = params.COMMERCE_API_BASE_URL.replace(/\/$/, '');
@@ -114,7 +114,7 @@ async function main(params) {
                 commerceStatusText: response.statusText,
                 timestamp: new Date().toISOString(),
             });
-            return errorResponse(`Commerce API error: ${response.statusText}`, response.status, correlationId);
+            return errorResponse(response.status, `Commerce API error: ${response.statusText}`, correlationId);
         }
 
         const product = await response.json();
@@ -149,7 +149,7 @@ async function main(params) {
             durationMs: Date.now() - startTime,
             timestamp: new Date().toISOString(),
         });
-        return errorResponse('Internal server error', 500, correlationId);
+        return errorResponse(500, 'Internal server error', correlationId);
     }
 }
 exports.main = main;
