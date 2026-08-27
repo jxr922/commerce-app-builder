@@ -1,8 +1,10 @@
 const { Core } = require('@adobe/aio-sdk');
+const { successResponse, errorResponse } = require('../utils');
 
 async function main (params) {
     const logger = Core.Logger('validate-product', {level: params.LOG_LEVEL || 'info'});
     const startTime = Date.now();
+    const correlationId = params['x-correlation-id'] || require('uuid').v4();
 
     logger.info({
         action: 'validate-product',
@@ -19,10 +21,7 @@ async function main (params) {
                 message: 'No product data in webhook payload',
                 timestamp: new Date().toISOString(),
             });
-            return {
-                statusCode: 200,
-                body: { op: 'success' },
-            };
+            return successResponse({ op: 'success' }, correlationId);
         }
 
         const name = product.name != null ? String(product.name) : '';
@@ -37,13 +36,10 @@ async function main (params) {
                 reason: 'name contains "invalid"',
                 timestamp: new Date().toISOString(),
             });
-            return {
-                statusCode: 200,
-                body: {
-                    op: 'exception',
-                    message,
-                },
-            };
+            return successResponse({
+                op: 'exception',
+                message,
+            }, correlationId);
         }
 
         logger.info({
@@ -54,10 +50,7 @@ async function main (params) {
             durationMs: Date.now() - startTime,
             timestamp: new Date().toISOString(),
         });
-        return {
-            statusCode: 200,
-            body: { op: 'success' },
-        };
+        return successResponse({ op: 'success' }, correlationId);
     } catch (error) {
         logger.error({
             action: 'validate-product',
@@ -67,10 +60,7 @@ async function main (params) {
             durationMs: Date.now() - startTime,
             timestamp: new Date().toISOString(),
         });
-        return {
-            statusCode: 200,
-            body: { op: 'success' },
-        };
+        return successResponse({ op: 'success' }, correlationId);
     }
 }
 

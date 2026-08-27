@@ -1,9 +1,11 @@
 const { Core } = require('@adobe/aio-sdk');
 const stateLib = require('@adobe/aio-lib-state');
+const { successResponse, errorResponse } = require('../utils');
 
 async function main (params) {
     const logger = Core.Logger('get-enriched-orders', {level: params.LOG_LEVEL || 'info'});
     const startTime = Date.now();
+    const correlationId = params['x-correlation-id'] || require('uuid').v4();
 
     try {
         logger.info({
@@ -62,13 +64,7 @@ async function main (params) {
             timestamp: new Date().toISOString(),
         });
 
-        return {
-            statusCode: 200,
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: { orders, summary },
-        };
+        return successResponse({ orders, summary }, correlationId);
     } catch (error) {
         logger.error({
             action: 'get-enriched-orders',
@@ -77,13 +73,7 @@ async function main (params) {
             durationMs: Date.now() - startTime,
             timestamp: new Date().toISOString(),
         });
-        return {
-            statusCode: 500,
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: { error: 'Failed to fetch enriched orders' },
-        };
+        return errorResponse('Failed to fetch enriched orders', 500, correlationId);
     }
 }
 

@@ -1,4 +1,5 @@
 const { Core } = require('@adobe/aio-sdk');
+const { successResponse, errorResponse } = require('../utils');
 
 const IMS_TOKEN_URL = 'https://ims-na1.adobelogin.com/ims/token/v3';
 const DEFAULT_SCOPES =
@@ -68,6 +69,7 @@ async function getImsAccessToken(params) {
 async function main(params) {
     const logger = Core.Logger('product-enrichment', {level: params.LOG_LEVEL || 'info'});
     const startTime = Date.now();
+    const correlationId = params['x-correlation-id'] || require('uuid').v4();
 
     try {
         const { sku } = params;
@@ -86,10 +88,7 @@ async function main(params) {
                 parameter: 'sku',
                 timestamp: new Date().toISOString(),
             });
-            return {
-                statusCode: 400,
-                body: { error: 'Missing required parameter: sku' },
-            };
+            return errorResponse('Missing required parameter: sku', 400, correlationId);
         }
 
         const baseUrl = params.COMMERCE_API_BASE_URL.replace(/\/$/, '');
@@ -115,10 +114,7 @@ async function main(params) {
                 commerceStatusText: response.statusText,
                 timestamp: new Date().toISOString(),
             });
-            return {
-                statusCode: response.status,
-                body: { error: `Commerce API error: ${response.statusText}` },
-            };
+            return errorResponse(`Commerce API error: ${response.statusText}`, response.status, correlationId);
         }
 
         const product = await response.json();
@@ -143,10 +139,7 @@ async function main(params) {
             timestamp: new Date().toISOString(),
         });
 
-        return {
-            statusCode: 200,
-            body: enrichedProduct,
-        };
+        return successResponse(enrichedProduct, correlationId);
     } catch (error) {
         logger.error({
             action: 'product-enrichment',
@@ -156,10 +149,7 @@ async function main(params) {
             durationMs: Date.now() - startTime,
             timestamp: new Date().toISOString(),
         });
-        return {
-            statusCode: 500,
-            body: { error: 'Internal server error' },
-        };
+        return errorResponse('Internal server error', 500, correlationId);
     }
 }
 exports.main = main;

@@ -1,5 +1,6 @@
 const { Core } = require('@adobe/aio-sdk');
 const stateLib = require('@adobe/aio-lib-state');
+const { successResponse, errorResponse } = require('../utils');
 
 const IMS_TOKEN_URL = 'https://ims-na1.adobelogin.com/ims/token/v3';
 const DEFAULT_SCOPES =
@@ -82,6 +83,7 @@ async function getImsAccessToken (params) {
 async function main (params) {
     const logger = Core.Logger('order-event-consumer', {level: params.LOG_LEVEL || 'info'});
     const startTime = Date.now();
+    const correlationId = params['x-correlation-id'] || require('uuid').v4();
 
     try {
         const eventId = params.event_id;
@@ -105,10 +107,7 @@ async function main (params) {
                 eventId,
                 timestamp: new Date().toISOString(),
             });
-            return {
-                statusCode: 200,
-                body: { message: 'Event already processed', eventId },
-            };
+            return successResponse({ message: 'Event already processed', eventId }, correlationId);
         }
 
         const orderId = eventData.entity_id
@@ -122,10 +121,7 @@ async function main (params) {
                 eventId,
                 timestamp: new Date().toISOString(),
             });
-            return {
-                statusCode: 200,
-                body: { message: 'No order ID in payload, skipping', eventId },
-            };
+            return successResponse({ message: 'No order ID in payload, skipping', eventId }, correlationId);
         }
 
         logger.info({
@@ -186,14 +182,12 @@ async function main (params) {
                 commerceError: errorText,
                 timestamp: new Date().toISOString(),
             });
-            return {
-                statusCode: 500,
-                body: {
-                    error: `Failed to fetch order ${orderId}`,
-                    commerceStatus: orderResponse.status,
-                    commerceBody: errorText,
-                },
-            };
+            return errorResponse(
+                `Failed to fetch order ${orderId}`,
+                500,
+                correlationId,
+                { commerceStatus: orderResponse.status, commerceBody: errorText }
+            );
         }
 
         const order = await orderResponse.json();
@@ -258,15 +252,12 @@ async function main (params) {
             timestamp: new Date().toISOString(),
         });
 
-        return {
-            statusCode: 200,
-            body: {
-                message: 'Event processed successfully',
-                eventId,
-                orderId,
-                orderTier: enrichedOrder.enrichment.orderTier,
-            },
-        };
+        return successResponse({
+            message: 'Event processed successfully',
+            eventId,
+            orderId,
+            orderTier: enrichedOrder.enrichment.orderTier,
+        }, correlationId);
     } catch (error) {
         logger.error({
             action: 'order-event-consumer',
@@ -276,10 +267,7 @@ async function main (params) {
             durationMs: Date.now() - startTime,
             timestamp: new Date().toISOString(),
         });
-        return {
-            statusCode: 500,
-            body: { error: 'Event processing failed' },
-        };
+        return errorResponse('Event processing failed', 500, correlationId);
     }
 }
 
