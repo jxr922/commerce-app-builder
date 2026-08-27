@@ -3,8 +3,16 @@ const stateLib = require('@adobe/aio-lib-state');
 
 async function main (params) {
     const logger = Core.Logger('get-enriched-orders', {level: params.LOG_LEVEL || 'info'});
+    const startTime = Date.now();
 
     try {
+        logger.info({
+            action: 'get-enriched-orders',
+            message: 'Action invoked',
+            orderIds: params.orderIds,
+            timestamp: new Date().toISOString(),
+        });
+
         const state = await stateLib.init();
 
         const orderKeys = params.orderIds
@@ -45,6 +53,15 @@ async function main (params) {
             ).length,
         };
 
+        logger.info({
+            action: 'get-enriched-orders',
+            message: 'Action completed',
+            totalOrders: summary.totalOrders,
+            totalRevenue: summary.totalRevenue,
+            durationMs: Date.now() - startTime,
+            timestamp: new Date().toISOString(),
+        });
+
         return {
             statusCode: 200,
             headers: {
@@ -53,7 +70,13 @@ async function main (params) {
             body: { orders, summary },
         };
     } catch (error) {
-        logger.error('Failed to fetch enriched orders:', error.message);
+        logger.error({
+            action: 'get-enriched-orders',
+            message: 'Action failed',
+            error: error.message,
+            durationMs: Date.now() - startTime,
+            timestamp: new Date().toISOString(),
+        });
         return {
             statusCode: 500,
             headers: {

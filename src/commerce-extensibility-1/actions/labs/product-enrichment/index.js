@@ -67,17 +67,30 @@ async function getImsAccessToken(params) {
 
 async function main(params) {
     const logger = Core.Logger('product-enrichment', {level: params.LOG_LEVEL || 'info'});
+    const startTime = Date.now();
 
     try {
         const { sku } = params;
+        
+        logger.info({
+            action: 'product-enrichment',
+            message: 'Action invoked',
+            sku,
+            timestamp: new Date().toISOString(),
+        });
+
         if (!sku) {
+            logger.warn({
+                action: 'product-enrichment',
+                message: 'Missing required parameter',
+                parameter: 'sku',
+                timestamp: new Date().toISOString(),
+            });
             return {
                 statusCode: 400,
                 body: { error: 'Missing required parameter: sku' },
             };
         }
-
-        logger.info(`Fetching product data for SKU: ${sku}`);
 
         const baseUrl = params.COMMERCE_API_BASE_URL.replace(/\/$/, '');
         const accessToken = await getImsAccessToken(params);
@@ -94,7 +107,14 @@ async function main(params) {
         });
 
         if (!response.ok) {
-            logger.error(`Commerce API returned ${response.status}`);
+            logger.error({
+                action: 'product-enrichment',
+                message: 'Commerce API returned error',
+                sku,
+                commerceStatus: response.status,
+                commerceStatusText: response.statusText,
+                timestamp: new Date().toISOString(),
+            });
             return {
                 statusCode: response.status,
                 body: { error: `Commerce API error: ${response.statusText}` },
@@ -112,14 +132,30 @@ async function main(params) {
             enrichedAt: new Date().toISOString(),
         };
 
-        logger.info(`Successfully enriched product: ${sku}`);
+        logger.info({
+            action: 'product-enrichment',
+            message: 'Action completed',
+            sku,
+            name: product.name,
+            price: product.price,
+            sustainabilityScore: enrichedProduct.sustainabilityScore,
+            durationMs: Date.now() - startTime,
+            timestamp: new Date().toISOString(),
+        });
 
         return {
             statusCode: 200,
             body: enrichedProduct,
         };
     } catch (error) {
-        logger.error('Action failed:', error.message);
+        logger.error({
+            action: 'product-enrichment',
+            message: 'Action failed',
+            error: error.message,
+            errorStack: error.stack,
+            durationMs: Date.now() - startTime,
+            timestamp: new Date().toISOString(),
+        });
         return {
             statusCode: 500,
             body: { error: 'Internal server error' },
