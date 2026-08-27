@@ -25,7 +25,7 @@ runtimeManifest:
             timeout: 30000
             memorySize: 256
           annotations:
-            require-adobe-auth: false
+            require-adobe-auth: true
             final: true
         validate-product:
           function: actions/labs/validate-product/index.js

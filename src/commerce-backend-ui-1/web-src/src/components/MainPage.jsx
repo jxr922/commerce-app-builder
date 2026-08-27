@@ -33,11 +33,13 @@ function MainPage () {
                 const guestConnection = await attach({ id: extensionId });
                 const context = guestConnection.sharedContext;
                 const imsToken = context.get('imsToken');
+                const imsOrgId = context.get('imsOrgId');
 
                 const response = await fetch(ACTION_URL, {
                     headers: {
                         Authorization: `Bearer ${imsToken}`,
                         'Content-Type': 'application/json',
+                        'x-gw-ims-org-id': imsOrgId,
                     },
                 });
 
