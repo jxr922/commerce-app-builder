@@ -76,8 +76,3 @@ jobs:
           COMMERCE_API_BASE_URL: ${{ secrets.COMMERCE_API_BASE_URL }}
           COMMERCE_STORE_CODE: ${{ secrets.COMMERCE_STORE_CODE }}
         run: aio app deploy
-
-      - name: Verify deployment
-        env:
-          AIO_IMS_CONTEXTS_CLI_ORG_ID: ${{ secrets.IMS_OAUTH_S2S_ORG_ID }}
-        run: aio runtime action list
