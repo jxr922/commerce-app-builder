@@ -1,0 +1,79 @@
+graph TB
+    subgraph GitHub["GitHub Repository"]
+        GH["github/workflows/deploy.yml"]
+        GH -->|Triggered on push| DEPLOY["Deploy Job"]
+    end
+    
+    subgraph CONFIG["Configuration Layer"]
+        AC["app.config.yaml<br/>(Root Extension List)"]
+        AC -->|includes| EC1["ext.config.yaml<br/>(commerce-extensibility-1)"]
+        AC -->|includes| BC["ext.config.yaml<br/>(commerce-backend-ui-1)"]
+        AC -->|includes| CC["ext.config.yaml<br/>(commerce-configuration-1)"]
+        ENV[".env<br/>(Secrets & Config)"]
+        ENV -.->|loads| DEPLOY
+    end
+    
+    subgraph ACTIONS["�� commerce-extensibility-1/actions/labs"]
+        subgraph UTIL["utils.js"]
+            SR["successResponse()"]
+            ER["errorResponse()"]
+            NOTE1["✨ Added: Correlation IDs<br/>✨ Added: Structured Logging"]
+        end
+        
+        OEC["order-event-consumer/index.js<br/>(Consumes Commerce Events)"]
+        GEO["get-enriched-orders/index.js<br/>(Retrieves from State)"]
+        PE["product-enrichment/index.js<br/>(Product Data)"]
+        VP["validate-product/index.js<br/>(Validation)"]
+        
+        OEC -->|uses| SR
+        OEC -->|uses| ER
+        GEO -->|uses| SR
+        GEO -->|uses| ER
+        PE -->|uses| SR
+        PE -->|uses| ER
+        VP -->|uses| SR
+        VP -->|uses| ER
+    end
+    
+    subgraph UI["🖥️ commerce-backend-ui-1/web-src"]
+        APP["App.jsx<br/>(UIX Registration)"]
+        MAIN["MainPage.jsx<br/>(Enriched Orders Dashboard)"]
+        CONFIG_JS["../app.commerce.config.js<br/>(Menu & Extension Config)"]
+        
+        APP -->|Registers Extension| CONFIG_JS
+        MAIN -->|Calls| GEO
+    end
+    
+    subgraph STATE["🔄 Adobe I/O Runtime"]
+        IOSTATE["I/O State<br/>(Persistent Data)"]
+        ACTIONS -->|Deploy Actions| IOSTATE
+    end
+    
+    subgraph COMMERCE["🛒 Adobe Commerce"]
+        ORDERS["Orders"]
+        EVENTS["Events"]
+        ORDERS -->|Event Stream| OEC
+        OEC -->|Enriched Order Data| IOSTATE
+    end
+    
+    subgraph DASHBOARD["👤 Admin Dashboard"]
+        REACT["React App<br/>(MainPage)"]
+        MAIN -->|Renders| REACT
+        REACT -->|GET /get-enriched-orders<br/>+ x-gw-ims-org-id| GEO
+        GEO -->|Returns with<br/>correlationId| REACT
+    end
+    
+    DEPLOY -->|aio app build| EC1
+    DEPLOY -->|aio app build| BC
+    DEPLOY -->|aio app deploy| ACTIONS
+    DEPLOY -->|aio app deploy| UI
+    
+    GEO -->|Query| IOSTATE
+    OEC -->|Store| IOSTATE
+    
+    IOSTATE -->|known-order-ids index| GEO
+    
+    style UTIL fill:#90EE90
+    style NOTE1 fill:#FFE4B5
+    style SR fill:#87CEEB
+    style ER fill:#87CEEB
